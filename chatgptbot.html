@@ -1,0 +1,286 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatgpt bot</title>
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f7f7f7;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+        }
+
+        .conversation-column {
+            flex: 1;
+            padding: 20px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            overflow-y: scroll;
+        }
+
+        .chat-container {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            width: 400px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            overflow-y: scroll;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+
+        .received-message {
+            background-color: #e0e0e0;
+            align-self: flex-start;
+            color: #333;
+        }
+
+        .sent-message {
+            background-color: #4caf50;
+            align-self: flex-end;
+            color: #333;
+        }
+
+        .input-box {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #e0e0e0;
+        }
+
+        button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.2;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.2;
+            }
+        }
+
+        .loading-message {
+            animation: pulse 0.5s infinite; 
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="conversation-column">
+            <div class="chat-controls">
+                <button id="new-chat-button">+ New Chat</button>
+            </div>
+        </div>
+        <div class="chat-container">
+            <div class="chat-box" id="chat-box"></div>
+            <div class="input-box">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+     document.addEventListener("DOMContentLoaded", function() {
+            var chatBox = document.getElementById("chat-box");
+            var userInputField = document.getElementById("user-input");
+            var sendButton = document.getElementById("send-button");
+            var newChatButton = document.getElementById("new-chat-button");
+
+    function sendMessage() {
+    var chatBox = document.querySelector(".chat-box");
+    var userInputField = document.getElementById("user-input");
+    var userInput = userInputField.value;
+    if (userInput.trim() === "") {
+        return;
+    }
+
+    var userMessage = document.createElement("div");
+    userMessage.className = "message user-message";
+    userMessage.textContent = userInput;
+    chatBox.appendChild(userMessage);
+
+    var loadingMessage = document.createElement("div");
+    loadingMessage.className = "message received-message loading-message";
+    loadingMessage.textContent = "...";
+    chatBox.appendChild(loadingMessage);
+
+    setTimeout(function() {
+            const promptedResponses = [
+            {
+                keywords: ["hi","hello","help"],
+                response: "Hello! How can I assist you today?"
+            },
+           {
+                keywords: ["what is the best selling album?","best selling music album", "Thriller"],
+                response: "The best-selling music album of all time is 'Thriller' by Michael Jackson."
+            },
+            {
+                keywords: ["country national anthem 32 syllables", "Japan"],
+                response: "Japan is the country with a national anthem that consists of only 32 syllables."
+            },
+            {
+                keywords: ["planet rotates clockwise", "Venus"],
+                response: "Venus is the only planet in the solar system that rotates clockwise."
+            },
+            {
+                keywords: ["most traded product after oil", "Coffee"],
+                response: "Coffee is the most frequently traded product around the world after oil."
+            },
+            {
+                keywords: ["country non-quadrilateral national flag", "Nepal"],
+                response: "Nepal has the world's only non-quadrilateral national flag."
+            },
+            {
+                keywords: ["country highest population density", "Monaco"],
+                response: "Monaco is the country with the highest population density."
+            },
+            {
+                keywords: ["fish most eggs vertebrate", "Sunfish"],
+                response: "The Sunfish can produce more eggs than any other known vertebrate."
+            },
+            {
+                keywords: ["Thomas Edison disability", "Deafness"],
+                response: "Thomas Edison suffered from deafness."
+            },
+            {
+                keywords: ["dog breed evidence admissible USA courts", "Bloodhound"],
+                response: "The Bloodhound is the only breed of dog whose evidence is admissible in some USA courts."
+            },
+            {
+                keywords: ["Beatles song longest on charts", "Hey Jude"],
+                response: "The Beatles song 'Hey Jude' remained the longest on the music charts."
+            },
+            {
+                keywords: ["only lizard with voice", "Gecko"],
+                response: "The Gecko is the only lizard that has a voice."
+            },
+            {
+                keywords: ["chemical element Halogen Family", "Iodine"],
+                response: "Iodine belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine."
+            },
+            {
+                keywords: ["island country off south-east coast of India", "Sri Lanka"],
+                response: "Sri Lanka is the island country that lies off the south-east coast of India."
+            },
+            {
+                keywords: ["longest river in Asia", "Yangtze"],
+                response: "The Yangtze is the longest river in Asia."
+            },
+            {
+                keywords: ["monetary unit in Korea", "Won"],
+                response: "The monetary unit in Korea is the Won."
+            },
+            {
+                keywords: ["artist painted Tahitian Women on the Beach", "Paul Gauguin"],
+                response: "Paul Gauguin is the artist who painted the 'Tahitian Women on the Beach'."
+            },
+            {
+                keywords: ["Spain national flower", "Carnation"],
+                response: "Spain's national flower is the Carnation."
+            },
+        ];
+
+        chatBox.removeChild(loadingMessage);
+
+        var matchedResponse = promptedResponses.find(item => {
+            return item.keywords.some(keyword => userInput.toLowerCase().includes(keyword.toLowerCase()));
+        });
+
+        if (matchedResponse) {
+            var chatGPTResponse = document.createElement("div");
+            chatGPTResponse.className = "message received-message";
+            chatGPTResponse.textContent = matchedResponse.response;
+            chatBox.appendChild(chatGPTResponse);
+        } else {
+            var receivedMessage = document.createElement("div");
+            receivedMessage.className = "message received-message";
+            receivedMessage.textContent = "I'm sorry, I don't understand that.";
+            chatBox.appendChild(receivedMessage);
+        }
+
+        document.getElementById("user-input").value = "";
+         chatBox.scrollTop = chatBox.scrollHeight;
+         document.getElementById("user-input").value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }, 2000);
+    }
+
+    var userInputField = document.getElementById("user-input");
+    var sendButton = document.getElementById("send-button");
+
+    function clearChat() {
+                chatBox.innerHTML = "";
+            }
+
+            userInputField.addEventListener("keyup", function(event) {
+                if (event.keyCode === 13) {
+                    sendMessage();
+                }
+            });
+
+            sendButton.addEventListener("click", sendMessage);
+
+            newChatButton.addEventListener("click", function() {
+                clearChat();
+            });
+        });</script>
+
+</body>
+</html>
