@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="text/javascript" src="plugins/jspsych.js"></script>
+    <script type="text/javascript" src="path/to/jspsych-html-keyboard-response.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-external-html@1.1.2"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatgpt bot</title>
+    <style>
+        .test-container {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            overflow-y: scroll;
+        }
+
+        .test-question {
+            margin-bottom: 20px;
+        }
+
+        .test-input {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .submit-test-button,
+        .next-question-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+            display: none;
+            align-items: center;
+        }
+
+            .submit-test-button:hover,
+            .next-question-button:hover {
+                background-color: #45a049;
+            }
+
+    </style>
+</head>
+<body>
+
+    <div class="test-container" id="test-container">
+    </div>
+
+    <button class="submit-test-button" id="submit-test">Submit Test</button>
+    <button class="next-question-button" id="next-question">Next Question</button>
+
+    <script>
+  document.addEventListener("DOMContentLoaded", function () {
+        var testContainer = document.getElementById("test-container");
+        var submitTestButton = document.getElementById("submit-test");
+        var nextQuestionButton = document.getElementById("next-question");
+        var testQuestions = [
+            "The best-selling music album of all time is 'Thriller' by ________.",
+            "________ is the country with a national anthem that consists of only 32 syllables.",
+            "________ is the only planet in the solar system that rotates clockwise.",
+            "________ is the most frequently traded product around the world after oil.",
+            "________ has the world's only non-quadrilateral national flag.",
+            "________ is the country with the highest population density.",
+            "The ________ can produce more eggs than any other known vertebrate.",
+            "Thomas Edison suffered from ________.",
+            "The ________ is the only breed of dog whose evidence is admissible in some USA courts.",
+            "The Beatles song ________ remained the longest on theon the music charts.",
+            "The ________ is the only lizard that has a voice.",
+            " ________ belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine.",
+            "________ is the island country that lies off the south-east coast of India.",
+            "The ________ is the longest river in Asia.",
+            "The ________ is the monetary unit in Korea.",
+            "________ is the artist who painted the 'Tahitian Women on the Beach'.",
+            "Spain's national flower is the ________.",
+            ];
+
+ function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            shuffleArray(testQuestions);
+
+            var currentIndex = 0;
+            var interval;
+
+            function displayNextQuestion() {
+                if (currentIndex < testQuestions.length) {
+                    var question = testQuestions[currentIndex];
+                    var testQuestionElement = document.createElement("div");
+                    testQuestionElement.className = "test-question";
+                    testQuestionElement.textContent = "Please fill in the answer: " + question.replace("?", "______");
+                    var inputField = document.createElement("input");
+                    inputField.type = "text";
+                    inputField.className = "test-input";
+                    testQuestionElement.appendChild(inputField);
+                    testContainer.appendChild(testQuestionElement);
+                    currentIndex++;
+
+                    // Show the "Next Question" button
+                    nextQuestionButton.style.display = "block";
+                    // Hide the "Submit Test" button
+                    submitTestButton.style.display = "none";
+
+                    // Set an interval after the user clicks "Next Question"
+                    interval = setInterval(function () {
+                        // Clear previous questions and answers
+                        testContainer.innerHTML = "";
+                        // Display the next question
+                        displayNextQuestion();
+                    }, 5000); // Change the interval duration as needed (in milliseconds)
+                } else {
+                    // Display a message or take some action when all questions are shown
+                    console.log("All questions displayed.");
+                    // Hide the "Next Question" button
+                    nextQuestionButton.style.display = "none";
+                    // Show the "Submit Test" button
+                    submitTestButton.style.display = "block";
+                    // Clear the interval
+                    clearInterval(interval);
+                }
+            }
+
+            // Display the first question
+            displayNextQuestion();
+
+            submitTestButton.addEventListener("click", function () {
+                // Collect participant responses
+                var participantResponses = testQuestions.map(function (question, index) {
+                    var response = document.querySelector(".test-input:nth-child(" + (index + 1) + ")").value;
+                    return { question: question, response: response };
+                });
+                console.log(participantResponses);
+            });
+
+            nextQuestionButton.addEventListener("click", function () {
+                // Clear the interval before displaying the next question
+                clearInterval(interval);
+                // Clear previous questions and answers
+                testContainer.innerHTML = "";
+                // Display the next question
+                displayNextQuestion();
+            });
+        });
+    </script>
+
+</body>
+</html>

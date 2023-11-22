@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" src="plugins/jspsych.js"></script>
+    <script type="text/javascript" src="path/to/jspsych-html-keyboard-response.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-external-html@1.1.2"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatgpt bot</title>
+    <style>
+        
+body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f7f7f7;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+        }
+
+        .conversation-column {
+            flex: 1;
+            padding: 20px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            overflow-y: scroll;
+        }
+
+        .chat-container {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            width: 400px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            overflow-y: scroll;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+
+        .received-message {
+            background-color: #e0e0e0;
+            align-self: flex-start;
+            color: #333;
+        }
+
+        .sent-message {
+            background-color: #4caf50;
+            align-self: flex-end;
+            color: #333;
+        }
+
+        .input-box {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #e0e0e0;
+        }
+
+        button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.2;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.2;
+            }
+        }
+
+        .loading-message {
+            animation: pulse 0.5s infinite; 
+        }
+    
+
+        .popup-container {
+            position: absolute;
+            top: 20px; /* Adjust top value as needed */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80%; /* Adjust width as needed */
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .popup-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .question-text {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .start-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4caf50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .start-button:hover {
+            background-color: #45a049;
+        }
+
+        #likert-container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+        }
+
+        #likert-rating {
+            width: 80%;
+            margin-top: 10px;
+        }
+
+        #likert-submit {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #likert-submit:hover {
+            background-color: #45a049;
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <div id="likert-container">
+        <label for="likert-rating">Rate your satisfaction (1-100):</label>
+        <input type="range" id="likert-rating" min="1" max="100" step="1" value="50">
+        <button id="likert-submit">Submit</button>
+    </div>
+    
+    <div class="container">
+        <div class="conversation-column">
+            <div class="chat-controls">
+                <button id="new-chat-button">+ New Chat</button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-box" id="chat-box"></div>
+            <div class="input-box">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="popup-container" class="popup-container">
+        <div id="popup-content" class="popup-content">
+            <div id="question-text" class="question-text"></div>
+            <button id="start-button" class="start-button">Start</button>
+        </div>
+    </div>      
+
+    <script>
+  document.addEventListener("DOMContentLoaded", function () {
+            var chatBox = document.getElementById("chat-box");
+            var userInputField = document.getElementById("user-input");
+            var sendButton = document.getElementById("send-button");
+            var newChatButton = document.getElementById("new-chat-button");
+            var endConversationButton = document.getElementById("end-conversation-button");
+            var exportButton = document.getElementById("export-button");
+            var popupContainer = document.getElementById("popup-container");
+            var startButton = document.getElementById("start-button");
+            var chatData = [];
+            var isConversationEnded = false;
+            var delayType;
+
+            var likertContainer = document.getElementById("likert-container");
+            var likertRatingInput = document.getElementById("likert-rating");
+            var likertSubmitButton = document.getElementById("likert-submit");
+
+    function showLikertRating() {
+        var likertContainer = document.getElementById("likert-container");
+        likertContainer.style.display = "flex";    
+    }
+
+    function hideLikertRating() {
+        likertContainer.style.display = "none";
+    }
+
+    function getLikertRating() {
+        return likertRatingInput.value;
+    }
+
+    function submitLikertRating() {
+        var likertRating = getLikertRating();
+        console.log("Likert Rating: " + likertRating);
+        hideLikertRating();
+    }
+
+    likertSubmitButton.addEventListener("click", submitLikertRating);
+
+    function startExperiment() {
+        delayType = randomizeDelay(); // Set the delay type randomly
+        console.log("Experiment started with delay type: " + delayType);
+        showLikertRating();
+    }
+
+        // // Array for the timeline with short delay
+        //     var trial_ShortDelay = {
+        //         timeline: [
+        //             {
+        //                 type: 'jsPsychHtmlKeyboardResponse',
+        //                 stimulus: function () {
+        //                     var sendMessage;
+        //                     return sendMessage;
+        //                 }
+        //             }
+        //         ]
+        //     };
+
+        //     // Array for the timeline with long delay
+        //     var trial_LongDelay = {
+        //         timeline: [
+        //             {
+        //                 type: 'jsPsychHtmlKeyboardResponse',
+        //                 stimulus: function () {
+        //                     var sendMessage;
+        //                     return sendMessage;
+        //                 }
+        //             }
+        //         ]
+        //     };
+
+          // var timeline = [trial_ShortDelay, trial_LongDelay];
+                    //     jsPsych.run(timeline)
+
+            var promptedResponses = [
+                    {
+                        keywords: ["hi", "hello", "help"],
+                        response: "Hello! How can I assist you today?"
+                    },
+                    {
+                        keywords: ["Thank you", "thanks"],
+                        response: "You're welcome! Is there anything else I can help you with today?"
+                    },
+                    {
+                        keywords: ["what is the best selling album?", "best selling music album", "Thriller"],
+                        response: "The best-selling music album of all time is 'Thriller' by Michael Jackson."
+                    },
+                    {
+                        keywords: ["country national anthem 32 syllables", "Japan"],
+                        response: "Japan is the country with a national anthem that consists of only 32 syllables."
+                    },
+                    {
+                        keywords: ["planet rotates clockwise", "Venus"],
+                        response: "Venus is the only planet in the solar system that rotates clockwise."
+                    },
+                    {
+                        keywords: ["most traded product after oil", "Coffee"],
+                        response: "Coffee is the most frequently traded product around the world after oil."
+                    },
+                    {
+                        keywords: ["country non-quadrilateral national flag", "Nepal"],
+                        response: "Nepal has the world's only non-quadrilateral national flag."
+                    },
+                    {
+                        keywords: ["country highest population density", "Monaco"],
+                        response: "Monaco is the country with the highest population density."
+                    },
+                    {
+                        keywords: ["fish most eggs vertebrate", "Sunfish"],
+                        response: "The Sunfish can produce more eggs than any other known vertebrate."
+                    },
+                    {
+                        keywords: ["Thomas Edison disability", "Deafness"],
+                        response: "Thomas Edison suffered from deafness."
+                    },
+                    {
+                        keywords: ["dog breed evidence admissible USA courts", "Bloodhound"],
+                        response: "The Bloodhound is the only breed of dog whose evidence is admissible in some USA courts."
+                    },
+                    {
+                        keywords: ["Beatles song longest on charts", "Hey Jude"],
+                        response: "The Beatles song 'Hey Jude' remained the longest on the music charts."
+                    },
+                    {
+                        keywords: ["only lizard with voice", "Gecko"],
+                        response: "The Gecko is the only lizard that has a voice."
+                    },
+                    {
+                        keywords: ["chemical element Halogen Family", "Iodine"],
+                        response: "Iodine belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine."
+                    },
+                    {
+                        keywords: ["island country off south-east coast of India", "Sri Lanka"],
+                        response: "Sri Lanka is the island country that lies off the south-east coast of India."
+                    },
+                    {
+                        keywords: ["longest river in Asia", "Yangtze"],
+                        response: "The Yangtze is the longest river in Asia."
+                    },
+                    {
+                        keywords: ["monetary unit in Korea", "money currency in Korea", "Won"],
+                        response: "The monetary unit in Korea is the Won."
+                    },
+                    {
+                        keywords: ["artist painted Tahitian Women on the Beach", "Paul Gauguin"],
+                        response: "Paul Gauguin is the artist who painted the 'Tahitian Women on the Beach'."
+                    },
+                    {
+                        keywords: ["Spain national flower", "Carnation"],
+                        response: "Spain's national flower is the Carnation."
+                    },
+                    ];
+
+                    var questions = [
+                        "what is the best selling album?",
+                        "which country national anthem 32 syllables?"
+                    ];
+
+                function randomizeDelay() {
+                return Math.random() < 0.5 ? "short" : "long";
+            }
+
+            function showPopupWindow() {
+                var randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+                document.getElementById("question-text").textContent = "Ask me: '" + randomQuestion + "'.";
+                popupContainer.style.display = "flex";
+            }
+
+              // Event listener for the start button
+              startButton.addEventListener("click", function () {
+                popupContainer.style.display = "none";
+                startExperiment();
+            });
+
+            showPopupWindow();
+
+            function startExperiment() {
+                delayType = randomizeDelay(); // Set the delay type randomly
+                console.log("Experiment started with delay type: " + delayType);
+            }
+
+            function getDelayTime() {
+                return delayType === 'short' ? 3000 : 6000;
+            }
+
+            function sendMessage() {
+        console.log("sendMessage function called");
+        var userInput = userInputField.value.trim();
+        console.log("User Input:", userInput); 
+        if (userInput === "") {
+            return;
+    }
+
+    // Store user message in chat data
+    var userMessageData = {
+        type: "user",
+        message: userInput,
+        timestamp: new Date().toISOString()
+    };
+    chatData.push(userMessageData);
+
+    // Clear the user input field
+    userInputField.value = "";
+
+    // Continue the conversation 
+    var matchedResponse = promptedResponses.find(item => {
+        return item.keywords.some(keyword => userInput.toLowerCase().includes(keyword.toLowerCase()));
+    });
+
+    // Add user message to the chat box
+    var userMessage = document.createElement("div");
+    userMessage.className = "message user-message";
+    userMessage.textContent = userInput;
+    chatBox.appendChild(userMessage);
+
+    // Add loading message to the chat box
+    var loadingMessage = document.createElement("div");
+    loadingMessage.className = "message received-message loading-message";
+    loadingMessage.textContent = "...";
+    chatBox.appendChild(loadingMessage);
+
+    setTimeout(function () {
+            chatBox.removeChild(loadingMessage);
+
+            var chatGPTResponse;
+            if (matchedResponse) {
+                chatGPTResponse = document.createElement("div");
+                chatGPTResponse.className = "message received-message";
+                chatGPTResponse.textContent = matchedResponse.response;
+                chatBox.appendChild(chatGPTResponse);
+            } else {
+                chatGPTResponse = document.createElement("div");
+                chatGPTResponse.className = "message received-message";
+                chatGPTResponse.textContent = "I'm sorry, I don't understand that.";
+                chatBox.appendChild(chatGPTResponse);
+            }
+
+            // Store response
+            var chatGPTResponseData = {
+                type: "bot",
+                message: matchedResponse ? matchedResponse.response : "I'm sorry, I don't understand that.",
+                timestamp: new Date().toISOString()
+            };
+            chatData.push(chatGPTResponseData);
+
+            // remove the question and feedback after 3 or 6 seconds based on delayType
+            setTimeout(function () {
+                        chatBox.removeChild(userMessage);
+                        chatBox.removeChild(chatGPTResponse);
+                    }, getDelayTime());
+                }, getDelayTime());
+            }       
+
+//save data online (not tested yet)
+function endConversation() {
+    if (userInputField.value.toLowerCase().includes("no")) {
+        isConversationEnded = true;
+        
+    // End the conversation and store data
+    var chatGPTResponseData = {
+        type: "bot",
+        message: "Conversation ended. Data sent to the server.",
+        timestamp: new Date().toISOString()
+    };
+    chatData.push(chatGPTResponseData);
+
+    // Send chatData to the server
+    fetch('save_chat.php', { //the php name with the actual URL of the server-side script
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chatData),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+
+    // Clear the chatData array for the next conversation
+    chatData = [];
+}};
+
+//save data locally
+function exportConversation() {
+    var conversationData = chatData;
+    // Convert data to CSV format
+    var csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Type,Message,Timestamp,DelayType\r\n"; 
+
+    conversationData.forEach(function (row) {
+        csvContent += row.type + "," + row.message + "," + row.timestamp + "," +
+            (row.participantInfo ? row.participantInfo.delayType : "") + "\r\n";
+    });
+  
+    function clearChat() {
+    chatBox.innerHTML = "";
+    userInputField.value = "";
+    chatData = [];
+}
+
+    function handleKeyDown(event) {
+        if (event.keyCode === 13) {
+            sendMessage();
+        }
+    }
+    
+// Event listeners
+sendButton.addEventListener("click", sendMessage);
+userInputField.addEventListener("keyup", handleKeyDown);
+console.log("sendButton:", sendButton);
+console.log("userInputField:", userInputField);
+newChatButton.addEventListener("click", clearChat);
+
+};
+
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiment Completed</title>
+</head>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    text-align: center;
+}
+
+h1 {
+    color: #333;
+}
+
+p {
+    color: #555;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f7f7f7;
+    display: inline-block;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+</style>
+
+<body>
+    <h1>Experiment Completed</h1>
+    <p>Thank you for participating in the experiment!</p>
+
+    <!-- here we can insert the debreif form-->
+
+    <script>
+        function fetchDataFromExperiment(experimentNumber) {
+            return fetch('experiment' + experimentNumber + '_data.json')
+                .then(response => response.json())
+                .catch(error => {
+                    console.error('Error fetching data from experiment ' + experimentNumber + ':', error);
+                    return [];
+                });
+        }
+
+        // Fetch data from each experiment page
+        Promise.all([
+            fetchDataFromExperiment(1),
+            fetchDataFromExperiment(2),
+            fetchDataFromExperiment(3)
+        ]).then(data => {
+            // Combine and process the data to one row in a file
+            var combinedData = data.flat();
+            console.log('Combined Data:', combinedData);
+
+        });
+    </script>
+</body>
+</html>
