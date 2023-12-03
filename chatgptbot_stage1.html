@@ -122,13 +122,13 @@ body {
 
         .popup-container {
             position: absolute;
-            top: 20px; /* Adjust top value as needed */
+            top: 20px; 
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 80%; /* Adjust width as needed */
+            width: 80%; 
             background: rgba(0, 0, 0, 0.7);
             z-index: 999;
         }
@@ -222,51 +222,22 @@ body {
     </div>      
 
     <script>
-  document.addEventListener("DOMContentLoaded", function () {
+ document.addEventListener("DOMContentLoaded", function () {
             var chatBox = document.getElementById("chat-box");
             var userInputField = document.getElementById("user-input");
             var sendButton = document.getElementById("send-button");
             var newChatButton = document.getElementById("new-chat-button");
-            var endConversationButton = document.getElementById("end-conversation-button");
-            var exportButton = document.getElementById("export-button");
             var popupContainer = document.getElementById("popup-container");
             var startButton = document.getElementById("start-button");
             var chatData = [];
+            var userInput = userInputField.value.trim();
             var isConversationEnded = false;
             var delayType;
-
             var likertContainer = document.getElementById("likert-container");
             var likertRatingInput = document.getElementById("likert-rating");
             var likertSubmitButton = document.getElementById("likert-submit");
-
-    function showLikertRating() {
-        var likertContainer = document.getElementById("likert-container");
-        likertContainer.style.display = "flex";    
-    }
-
-    function hideLikertRating() {
-        likertContainer.style.display = "none";
-    }
-
-    function getLikertRating() {
-        return likertRatingInput.value;
-    }
-
-    function submitLikertRating() {
-        var likertRating = getLikertRating();
-        console.log("Likert Rating: " + likertRating);
-        hideLikertRating();
-    }
-
-    likertSubmitButton.addEventListener("click", submitLikertRating);
-
-    function startExperiment() {
-        delayType = randomizeDelay(); // Set the delay type randomly
-        console.log("Experiment started with delay type: " + delayType);
-        showLikertRating();
-    }
-
-        // // Array for the timeline with short delay
+             
+            // Array for the timeline with short delay
         //     var trial_ShortDelay = {
         //         timeline: [
         //             {
@@ -292,8 +263,8 @@ body {
         //         ]
         //     };
 
-          // var timeline = [trial_ShortDelay, trial_LongDelay];
-                    //     jsPsych.run(timeline)
+        //   var timeline = [trial_ShortDelay, trial_LongDelay];
+        //                 jsPsych.run(timeline)
 
             var promptedResponses = [
                     {
@@ -376,46 +347,76 @@ body {
 
                     var questions = [
                         "what is the best selling album?",
-                        "which country national anthem 32 syllables?"
+                        "which country national anthem 32 syllables?",
+                        "What is the only planet in the solar system that rotates clockwise?",
+                        "What is the only planet in the solar system that rotates clockwise?",
+                        "What is the most frequently traded product around the world after oil?",
+                        "What is the country with the world's only non-quadrilateral national flag?",
+                        "What is the country with the highest population density?",
+                        "What is the vertebrate that can produce more eggs than any other known vertebrate?",
+                        "What did Thomas Edison suffer from?",
+                        "What is the only breed of dog whose evidence is admissible in some USA courts?",
+                        "What element belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine?",
+                        "What is the island country that lies off the south-east coast of India?",
+                        "What is the longest river in Asia?",
+                        "What is the monetary unit in Korea?",
+                        "Who is the artist who painted 'Tahitian Women on the Beach'?",
+                        "What is Spain's national flower?"
                     ];
+                    function randomizeDelay() {
+                    return Math.random() < 0.5 ? "short" : "long";
+                }
 
-                function randomizeDelay() {
-                return Math.random() < 0.5 ? "short" : "long";
-            }
+                function showPopupWindow() {
+                    var randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+                    document.getElementById("question-text").textContent = "Ask me: '" + randomQuestion + "'.";
+                    popupContainer.style.display = "flex";
+                }
 
-            function showPopupWindow() {
-                var randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-                document.getElementById("question-text").textContent = "Ask me: '" + randomQuestion + "'.";
-                popupContainer.style.display = "flex";
-            }
+                showPopupWindow();
 
-              // Event listener for the start button
-              startButton.addEventListener("click", function () {
-                popupContainer.style.display = "none";
-                startExperiment();
-            });
+                function startExperiment() {
+                    delayType = randomizeDelay();
+                    console.log("Experiment started with delay type: " + delayType);
+                }
 
-            showPopupWindow();
+                function getDelayTime() {
+                    return delayType === 'short' ? 3000 : 6000;
+                }
 
-            function startExperiment() {
-                delayType = randomizeDelay(); // Set the delay type randomly
-                console.log("Experiment started with delay type: " + delayType);
-            }
+                function sendMessage() {
+                    var userInput = userInputField.value.trim();
+                    if (userInput === "") {
+                        return;
+                    }
 
-            function getDelayTime() {
-                return delayType === 'short' ? 3000 : 6000;
-            }
+                    function getDelayTime() {
+                        return delayType === 'short' ? 3000 : 6000;
+                    }
 
-            function sendMessage() {
-        console.log("sendMessage function called");
-        var userInput = userInputField.value.trim();
-        console.log("User Input:", userInput); 
-        if (userInput === "") {
-            return;
-    }
+                    function showLikertRating() {
+                        var likertContainer = document.getElementById("likert-container");
+                        likertContainer.style.display = "flex";    
+                    }
 
-    // Store user message in chat data
-    var userMessageData = {
+                    function hideLikertRating() {
+                        likertContainer.style.display = "none";
+                    }
+
+                    function getLikertRating() {
+                        return likertRatingInput.value;
+                    }
+
+                    function submitLikertRating() {
+                        var likertRating = getLikertRating();
+                        console.log("Likert Rating: " + likertRating);
+                        hideLikertRating();
+                    }
+
+                    likertSubmitButton.addEventListener("click", submitLikertRating);
+
+     // Store user message in chat data
+     var userMessageData = {
         type: "user",
         message: userInput,
         timestamp: new Date().toISOString()
@@ -474,6 +475,7 @@ body {
                 }, getDelayTime());
             }       
 
+
 //save data online (not tested yet)
 function endConversation() {
     if (userInputField.value.toLowerCase().includes("no")) {
@@ -488,7 +490,7 @@ function endConversation() {
     chatData.push(chatGPTResponseData);
 
     // Send chatData to the server
-    fetch('save_chat.php', { //the php name with the actual URL of the server-side script
+    fetch('save_chat.php', { //Insert the php of the service here
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -507,40 +509,39 @@ function endConversation() {
     chatData = [];
 }};
 
-//save data locally
-function exportConversation() {
-    var conversationData = chatData;
-    // Convert data to CSV format
-    var csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Type,Message,Timestamp,DelayType\r\n"; 
+// //save data locally
+// function exportConversation() {
+//     var conversationData = chatData;
+//     // Convert data to CSV format
+//     var csvContent = "data:text/csv;charset=utf-8,";
+//     csvContent += "Type,Message,Timestamp,DelayType\r\n"; 
 
-    conversationData.forEach(function (row) {
-        csvContent += row.type + "," + row.message + "," + row.timestamp + "," +
-            (row.participantInfo ? row.participantInfo.delayType : "") + "\r\n";
-    });
+//     conversationData.forEach(function (row) {
+//         csvContent += row.type + "," + row.message + "," + row.timestamp + "," +
+//             (row.participantInfo ? row.participantInfo.delayType : "") + "\r\n";
+//     });
+    
   
-    function clearChat() {
-    chatBox.innerHTML = "";
-    userInputField.value = "";
-    chatData = [];
+
+function handleKeyDown(event) {
+    event.preventDefault(); 
+        if (event.keyCode === 13) {
+        sendMessage();
+    }
 }
 
-    function handleKeyDown(event) {
-        if (event.keyCode === 13) {
-            sendMessage();
-        }
-    }
-    
-// Event listeners
-sendButton.addEventListener("click", sendMessage);
-userInputField.addEventListener("keyup", handleKeyDown);
-console.log("sendButton:", sendButton);
-console.log("userInputField:", userInputField);
-newChatButton.addEventListener("click", clearChat);
+ // Event listeners
+ startButton.addEventListener("click", function () {
+        popupContainer.style.display = "none";
+        startExperiment();
+    });
 
-};
-
+    sendButton.addEventListener("click", sendMessage);
+    // endConversationButton.addEventListener("click", endConversation);
+    userInputField.addEventListener("keydown", handleKeyDown);
+    newChatButton.addEventListener("click", clearChat);
 });
+
 
 </script>
 </body>
