@@ -131,7 +131,6 @@
                     // Hide the "Submit Test" button
                     submitTestButton.style.display = "none";
 
-                    // Add event listener for Enter key
                     inputField.addEventListener("keyup", function(event) {
                         if (event.key === "Enter") {
                             // Trigger the next question button
@@ -139,7 +138,6 @@
                         }
                     });
                 } else {
-                    // Display a message or take some action when all questions are shown
                     console.log("All questions displayed.");
                     // Hide the "Next Question" button
                     nextQuestionButton.style.display = "none";
