@@ -8,18 +8,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatgpt bot</title>
     <style>
-        .test-container {
+        body {
             font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #ffffff;
-            border-right: 1px solid #ccc;
-            overflow-y: scroll;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f7f7f7;
         }
 
-        .test-question {
+        h1 {
+            text-align: center;
             margin-bottom: 20px;
         }
-
+        
+        .test-container {
+            flex: 1;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+    
+        .test-question {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px; 
+            max-width: 80%;
+            margin: auto;
+            margin-top: 100px; 
+        }
+    
         .test-input {
             margin-bottom: 10px;
             padding: 10px;
@@ -27,7 +46,7 @@
             border-radius: 5px;
             font-size: 16px;
         }
-
+    
         .submit-test-button,
         .next-question-button {
             padding: 10px 20px;
@@ -37,20 +56,20 @@
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
-            margin-top: 10px;
+            margin-top: 20px;
             display: none;
             align-items: center;
         }
-
-            .submit-test-button:hover,
-            .next-question-button:hover {
-                background-color: #45a049;
-            }
-
+    
+        .submit-test-button:hover,
+        .next-question-button:hover {
+            background-color: #45a049;
+        }
     </style>
+    
 </head>
 <body>
-
+<h1>Please fill in the answer:</h1>
     <div class="test-container" id="test-container">
     </div>
 
@@ -92,15 +111,15 @@
             shuffleArray(testQuestions);
 
             var currentIndex = 0;
-            var interval;
+            var inputField;
 
             function displayNextQuestion() {
                 if (currentIndex < testQuestions.length) {
                     var question = testQuestions[currentIndex];
                     var testQuestionElement = document.createElement("div");
                     testQuestionElement.className = "test-question";
-                    testQuestionElement.textContent = "Please fill in the answer: " + question.replace("?", "______");
-                    var inputField = document.createElement("input");
+                    testQuestionElement.textContent = question.replace("?", "______");
+                    inputField = document.createElement("input");
                     inputField.type = "text";
                     inputField.className = "test-input";
                     testQuestionElement.appendChild(inputField);
@@ -112,13 +131,13 @@
                     // Hide the "Submit Test" button
                     submitTestButton.style.display = "none";
 
-                    // Set an interval after the user clicks "Next Question"
-                    interval = setInterval(function () {
-                        // Clear previous questions and answers
-                        testContainer.innerHTML = "";
-                        // Display the next question
-                        displayNextQuestion();
-                    }, 5000); // Change the interval duration as needed (in milliseconds)
+                    // Add event listener for Enter key
+                    inputField.addEventListener("keyup", function(event) {
+                        if (event.key === "Enter") {
+                            // Trigger the next question button
+                            nextQuestionButton.click();
+                        }
+                    });
                 } else {
                     // Display a message or take some action when all questions are shown
                     console.log("All questions displayed.");
@@ -126,8 +145,6 @@
                     nextQuestionButton.style.display = "none";
                     // Show the "Submit Test" button
                     submitTestButton.style.display = "block";
-                    // Clear the interval
-                    clearInterval(interval);
                 }
             }
 
@@ -144,15 +161,13 @@
             });
 
             nextQuestionButton.addEventListener("click", function () {
-                // Clear the interval before displaying the next question
-                clearInterval(interval);
                 // Clear previous questions and answers
                 testContainer.innerHTML = "";
                 // Display the next question
                 displayNextQuestion();
             });
-        });
-    </script>
+            });
+</script>
 
 </body>
 </html>
