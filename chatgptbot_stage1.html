@@ -230,7 +230,6 @@ body {
             var popupContainer = document.getElementById("popup-container");
             var startButton = document.getElementById("start-button");
             var chatData = [];
-            var userInput = userInputField.value.trim();
             var isConversationEnded = false;
             var delayType;
             var likertContainer = document.getElementById("likert-container");
@@ -390,10 +389,6 @@ body {
                         return;
                     }
 
-                    function getDelayTime() {
-                        return delayType === 'short' ? 3000 : 6000;
-                    }
-
                     function showLikertRating() {
                         var likertContainer = document.getElementById("likert-container");
                         likertContainer.style.display = "flex";    
@@ -522,6 +517,13 @@ function endConversation() {
 //     });
     
   
+function clearChat() {
+    chatBox.innerHTML = "";
+    userInputField.value = "";
+    chatData = [];
+    document.getElementById("end-conversation-button").style.display = "none";
+    document.getElementById("export-button").style.display = "none";
+}
 
 function handleKeyDown(event) {
     event.preventDefault(); 
@@ -536,12 +538,20 @@ function handleKeyDown(event) {
         startExperiment();
     });
 
-    sendButton.addEventListener("click", sendMessage);
-    // endConversationButton.addEventListener("click", endConversation);
-    userInputField.addEventListener("keydown", handleKeyDown);
-    newChatButton.addEventListener("click", clearChat);
-});
+    sendButton.addEventListener("click", function(){
+        sendMessage();    
+    });
 
+    // endConversationButton.addEventListener("click", endConversation);
+    // userInputField.addEventListener("keydown", function(){ 
+    //     handleKeyDown()
+    // });
+    
+    newChatButton.addEventListener("click", function(){ 
+        clearChat()
+    });
+
+ })
 
 </script>
 </body>
