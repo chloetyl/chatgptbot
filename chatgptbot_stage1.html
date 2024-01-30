@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <script type="text/javascript" src="plugins/jspsych.js"></script>
-    <script type="text/javascript" src="path/to/jspsych-html-keyboard-response.js"></script>
     <script src="https://unpkg.com/@jspsych/plugin-external-html@1.1.2"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatgpt bot</title>
     <style>
-        
-body {
+        body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -97,9 +96,9 @@ body {
             transition: background-color 0.3s;
         }
 
-            button:hover {
-                background-color: #45a049;
-            }
+        button:hover {
+            background-color: #45a049;
+        }
 
         @keyframes pulse {
             0% {
@@ -116,19 +115,18 @@ body {
         }
 
         .loading-message {
-            animation: pulse 0.5s infinite; 
+            animation: pulse 0.5s infinite;
         }
-    
 
         .popup-container {
             position: absolute;
-            top: 20px; 
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 80%; 
+            width: 80%;
             background: rgba(0, 0, 0, 0.7);
             z-index: 999;
         }
@@ -154,405 +152,618 @@ body {
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
+            margin-top: 10px;
         }
 
         .start-button:hover {
             background-color: #45a049;
         }
 
-        #likert-container {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 20px;
-        }
-
-        #likert-rating {
-            width: 80%;
-            margin-top: 10px;
-        }
-
-        #likert-submit {
-            margin-top: 10px;
+        .next-button {
             padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4caf50;
             border: none;
             border-radius: 5px;
-            background-color: #4caf50;
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
+            margin-top: 10px;
         }
 
-        #likert-submit:hover {
+        .next-button:hover {
             background-color: #45a049;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+        }
 
     </style>
 </head>
-<body>
 
-    <div id="likert-container">
-        <label for="likert-rating">Rate your satisfaction (1-100):</label>
-        <input type="range" id="likert-rating" min="1" max="100" step="1" value="50">
-        <button id="likert-submit">Submit</button>
-    </div>
-    
+<body>
     <div class="container">
         <div class="conversation-column">
             <div class="chat-controls">
                 <button id="new-chat-button">+ New Chat</button>
             </div>
         </div>
-
         <div class="chat-container">
             <div class="chat-box" id="chat-box"></div>
             <div class="input-box">
                 <input type="text" id="user-input" placeholder="Type your message...">
                 <button id="send-button">Send</button>
             </div>
+            <button id="question-start-button" class="start-button">Start</button>
+            <button id="question-next-button" class="next-button" style="display: none;">Next</button>
+            <div id="question-content" class="popup-content">
+                <div id="question-text" class="question-text"></div>
+            </div>
+
+            <div id="rating-modal" class="popup-container" style="display: none;">
+                <div class="popup-content">
+                    <div id="rating-text" class="question-text">How interesting is this question on a scale of 1 to 5?
+                    </div>
+                    <div id="rating-buttons">
+                        <button class="rating-button" onclick="rateQuestion(1)">1</button>
+                        <button class="rating-button" onclick="rateQuestion(2)">2</button>
+                        <button class="rating-button" onclick="rateQuestion(3)">3</button>
+                        <button class="rating-button" onclick="rateQuestion(4)">4</button>
+                        <button class="rating-button" onclick="rateQuestion(5)">5</button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div id="popup-container" class="popup-container">
-        <div id="popup-content" class="popup-content">
-            <div id="question-text" class="question-text"></div>
-            <button id="start-button" class="start-button">Start</button>
+<div id="completionModal" class="modal">
+            <p>Congratulations! You've completed all the questions!</p>
+            <button id="redirectButton">Go to Another Page</button>
         </div>
-    </div>      
+        <div id="modalOverlay" class="modal-overlay"></div>
 
-    <script>
- document.addEventListener("DOMContentLoaded", function () {
-            var chatBox = document.getElementById("chat-box");
-            var userInputField = document.getElementById("user-input");
-            var sendButton = document.getElementById("send-button");
-            var newChatButton = document.getElementById("new-chat-button");
-            var popupContainer = document.getElementById("popup-container");
-            var startButton = document.getElementById("start-button");
-            var chatData = [];
-            var isConversationEnded = false;
-            var delayType;
-            var likertContainer = document.getElementById("likert-container");
-            var likertRatingInput = document.getElementById("likert-rating");
-            var likertSubmitButton = document.getElementById("likert-submit");
-             
-            // Array for the timeline with short delay
-        //     var trial_ShortDelay = {
-        //         timeline: [
-        //             {
-        //                 type: 'jsPsychHtmlKeyboardResponse',
-        //                 stimulus: function () {
-        //                     var sendMessage;
-        //                     return sendMessage;
-        //                 }
-        //             }
-        //         ]
-        //     };
 
-        //     // Array for the timeline with long delay
-        //     var trial_LongDelay = {
-        //         timeline: [
-        //             {
-        //                 type: 'jsPsychHtmlKeyboardResponse',
-        //                 stimulus: function () {
-        //                     var sendMessage;
-        //                     return sendMessage;
-        //                 }
-        //             }
-        //         ]
-        //     };
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var chatBox = document.getElementById("chat-box");
+                    var userInputField = document.getElementById("user-input");
+                    var sendButton = document.getElementById("send-button");
+                    var newChatButton = document.getElementById("new-chat-button");
+                    var startButton = document.getElementById("question-start-button");
+                    var nextButton = document.getElementById("question-next-button");
+                    var ratingModal = document.getElementById("rating-modal");
+                    var ratingButtons = document.querySelectorAll(".rating-button");
 
-        //   var timeline = [trial_ShortDelay, trial_LongDelay];
-        //                 jsPsych.run(timeline)
+                    function showRatingModal() {
+                        ratingModal.style.display = "flex";
+                    }
 
-            var promptedResponses = [
-                    {
-                        keywords: ["hi", "hello", "help"],
-                        response: "Hello! How can I assist you today?"
-                    },
-                    {
-                        keywords: ["Thank you", "thanks"],
-                        response: "You're welcome! Is there anything else I can help you with today?"
-                    },
-                    {
-                        keywords: ["what is the best selling album?", "best selling music album", "Thriller"],
-                        response: "The best-selling music album of all time is 'Thriller' by Michael Jackson."
-                    },
-                    {
-                        keywords: ["country national anthem 32 syllables", "Japan"],
-                        response: "Japan is the country with a national anthem that consists of only 32 syllables."
-                    },
-                    {
-                        keywords: ["planet rotates clockwise", "Venus"],
-                        response: "Venus is the only planet in the solar system that rotates clockwise."
-                    },
-                    {
-                        keywords: ["most traded product after oil", "Coffee"],
-                        response: "Coffee is the most frequently traded product around the world after oil."
-                    },
-                    {
-                        keywords: ["country non-quadrilateral national flag", "Nepal"],
-                        response: "Nepal has the world's only non-quadrilateral national flag."
-                    },
-                    {
-                        keywords: ["country highest population density", "Monaco"],
-                        response: "Monaco is the country with the highest population density."
-                    },
-                    {
-                        keywords: ["fish most eggs vertebrate", "Sunfish"],
-                        response: "The Sunfish can produce more eggs than any other known vertebrate."
-                    },
-                    {
-                        keywords: ["Thomas Edison disability", "Deafness"],
-                        response: "Thomas Edison suffered from deafness."
-                    },
-                    {
-                        keywords: ["dog breed evidence admissible USA courts", "Bloodhound"],
-                        response: "The Bloodhound is the only breed of dog whose evidence is admissible in some USA courts."
-                    },
-                    {
-                        keywords: ["Beatles song longest on charts", "Hey Jude"],
-                        response: "The Beatles song 'Hey Jude' remained the longest on the music charts."
-                    },
-                    {
-                        keywords: ["only lizard with voice", "Gecko"],
-                        response: "The Gecko is the only lizard that has a voice."
-                    },
-                    {
-                        keywords: ["chemical element Halogen Family", "Iodine"],
-                        response: "Iodine belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine."
-                    },
-                    {
-                        keywords: ["island country off south-east coast of India", "Sri Lanka"],
-                        response: "Sri Lanka is the island country that lies off the south-east coast of India."
-                    },
-                    {
-                        keywords: ["longest river in Asia", "Yangtze"],
-                        response: "The Yangtze is the longest river in Asia."
-                    },
-                    {
-                        keywords: ["monetary unit in Korea", "money currency in Korea", "Won"],
-                        response: "The monetary unit in Korea is the Won."
-                    },
-                    {
-                        keywords: ["artist painted Tahitian Women on the Beach", "Paul Gauguin"],
-                        response: "Paul Gauguin is the artist who painted the 'Tahitian Women on the Beach'."
-                    },
-                    {
-                        keywords: ["Spain national flower", "Carnation"],
-                        response: "Spain's national flower is the Carnation."
-                    },
-                    ];
+                    function hideRatingModal() {
+                        ratingModal.style.display = "none";
+                    }
 
-                    var questions = [
-                        "what is the best selling album?",
-                        "which country national anthem 32 syllables?",
-                        "What is the only planet in the solar system that rotates clockwise?",
-                        "What is the only planet in the solar system that rotates clockwise?",
-                        "What is the most frequently traded product around the world after oil?",
-                        "What is the country with the world's only non-quadrilateral national flag?",
+                    function rateQuestion(rating) {
+                        console.log("User rated the question:", rating);
+                        hideRatingModal();
+                        startExperiment();
+                    }
+
+                    // array to store chat data
+                    var chatData = [];
+
+                    var originalQuestions = [
+                        //Mullaney et al. (2014) https://psycnet.apa.org/record/2014-27887-001
+                        "What does a deltiologist collect?",
+                        "What do phobatrivaphobics fear?",
+                        "What was the top-rated television series from 1957–1961?",
+                        " What was Adolf Hitler’s favorite movie?",
+                        "What do dendrologists study?",
+                        "What does a librocubicularist do?",
+                        "What is a prestidigitator?",
+                        "What is the most popular ice cream flavor?",
+                        "Coca-Cola was originally what color?",
+                        "What was the first novel written on a typewriter?",
+                        "Which country offered Albert Einstein its presidency in 1952?",
+                        "Thurl Ravenscroft was the voice of what cartoon character?",
+                        "The ruins of Troy are located in what country?",
+                        "How many spaces are on a Scrabble board?",
+                        "What was the biggest-selling toy in 1957?",
+                        "What letter does not appear on the periodic table of elements?",
+                        "What year in a marriage is the leather anniversary?",
+                        "Which U.S. president wrote 37 books?",
+                        "What does Pokémon stand for?",
+                        "Who was the sun god of ancient Egypt?",
+                        "What is the top-grossing Disney movie of all time?",
+                        "What is the longest one-syllable word in the English language?",
+                        "What is a group of kangaroos called?",
+                        "What is the most common name in the world?",
+                        "What are the plastic things on the end of shoelaces called?",
+                        "What is the side of a hammer called?",
+                        "What does camera shutter speed “B” stand for?",
+                        "What is IBM’s motto?",
+                        "The most presidents have been born in which state?",
+                        "Which U.S. president was once a male model?",
+                        "What is a baby bat called?",
+                        "In what year was the Golden Gate Bridge first opened?",
+                        "What do the Olympic rings represent?",
+                        "What does karaoke mean in Japanese?",
+
+                        //Fastrich et al. (2017)  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6133257/ 
+                        "What is the best selling music album of all time?",
+                        "Which planet in the solar system is the only one that rotates clockwise?",
+                        "Which product, after oil, is the most frequently traded product around the world?",
+                        "Which country has the world's only non-quadrilateral national flag?",
                         "What is the country with the highest population density?",
-                        "What is the vertebrate that can produce more eggs than any other known vertebrate?",
-                        "What did Thomas Edison suffer from?",
-                        "What is the only breed of dog whose evidence is admissible in some USA courts?",
-                        "What element belongs in the Halogen Family with fluorine, chlorine, bromine, and astatine?",
-                        "What is the island country that lies off the south-east coast of India?",
+                        "Which fish can produce more eggs than any other known vertebrate?",
+                        "What breed of dog is the only animal whose evidence is admissible in some USA courts?",
+                        "What Beatles song remained the longest on the music charts?",
+                        "What is the only lizard that has a voice?",
+                        "Which chemical element belongs in the Halogen Family with fluorine, chlorine, bromine and astatine?",
+                        "What island country lies off the south-east coast of India?",
                         "What is the longest river in Asia?",
-                        "What is the monetary unit in Korea?",
-                        "Who is the artist who painted 'Tahitian Women on the Beach'?",
-                        "What is Spain's national flower?"
+                        "What is the name of the artist who painted the 'Tahitian Women on the Beach'?",
+                        "In which country is Angel Falls, the tallest waterfall, located?",
+                        "What is the largest temple in Egypt?",
+                        "In which country is the temple of 'Angkor Wat' located?",
+                        "What is the largest freshwater lake in the world by surface area?",
+                        "Which popular Greek philosopher is said to have tutored Alexander the Great?",
+                        "Which Australian state was formerly known as Van Diemen's Land?",
+                        "What insulates the ice cream to prevent it from melting in the hot dish 'Baked Alaska'?",
+                        "What body of water does the Danube River flow into?",
+                        "What is added to white sugar to make brown sugar?",
+                        "What is the name of Beethoven's only opera?",
+                        "In which city would you find the Hermitage art gallery?",
+                        "Which country has the longest coastline?",
+                        "What is the last name of the cosmonaut who first orbited around the Earth?",
+
                     ];
-                    function randomizeDelay() {
-                    return Math.random() < 0.5 ? "short" : "long";
+
+                    var currentQuestionIndex = 0;
+                    var questions = shuffleArray(originalQuestions);
+
+                    var promptedResponses = [
+                        //Mullaney et al. (2014) https://psycnet.apa.org/record/2014-27887-001
+                        // {
+                        //     keywords: ["hi"],
+                        //     response: "Hello! How can I assist you today?"
+                        // },
+                        // {
+                        //     keywords: ["Thank you", "thanks"],
+                        //     response: "You're welcome! Is there anything else I can help you with today?"
+                        // },
+                        {
+                            keywords: ["What does a deltiologist collect?", "deltiologist", "collect"],
+                            response: "A deltiologist is someone who collects postcards. Deltiology is the study and collection of postcards, and it is a popular hobby among those who appreciate the historical, cultural, and artistic aspects of these small pieces of printed or illustrated cardstock. Postcards often feature images of landmarks, landscapes, events, and various other subjects, making them interesting collectibles for people who enjoy exploring different aspects of the world through visual representations on postcards."
+                        },
+                        {
+                            keywords: ["What do phobatrivaphobics fear?", "Phobatrivaphobics", "phobias"],
+                            response: "Phobatrivaphobia is the fear of trivia. It's derived from the word trivia, which generally refers to bits of information or facts that are of little importance. People with phobatrivaphobia may experience anxiety or discomfort when confronted with trivial or insignificant facts, conversations, or activities. Like other specific phobias, the fear of trivia can vary in severity from person to person."
+                        },
+                        {
+                            keywords: ["What was the top-rated television series from 1957–1961?", "television"],
+                            response: "During the 1957-1961 period, one of the top-rated television series was Gunsmoke. Gunsmoke is a Western television series that originally aired on CBS from 1955 to 1975. It was set in the American Old West and followed the adventures of Marshal Matt Dillon in the fictional town of Dodge City. The show consistently ranked among the highest-rated programs during its run, making it one of the most popular TV series of its time."
+                        },
+                        {
+                            keywords: ["What was Adolf Hitler’s favorite movie?", "Adolf Hitler"],
+                            response: " Adolf Hitler's favorite movie is often reported to be King Kong (1933), the classic film directed by Merian C. Cooper and Ernest B. Schoedsack. Hitler supposedly admired the movie for its special effects and considered it one of his favorites. However, it's essential to note that information about Hitler's personal preferences can be challenging to verify, and some aspects of his personal life and interests remain controversial or unclear. The claim about King Kong as his favorite movie is based on historical accounts and anecdotes but may not be definitively confirmed."
+                        },
+                        {
+                            keywords: ["What do dendrologists study?", "dendrologists"],
+                            response: "Dendrologists study trees and woody plants, specifically focusing on the scientific and systematic aspects of these organisms. The term dendrology comes from the Greek words dendron, meaning tree, and logos, meaning study. Dendrologists are experts in the identification, classification, anatomy, physiology, ecology, and management of trees and shrubs. They may work in various fields, including forestry, horticulture, conservation, and environmental science. Dendrologists play a crucial role in understanding and managing forests, tree populations, and individual tree species, contributing to efforts related to biodiversity, conservation, and sustainable land management."
+                        },
+                        {
+                            keywords: ["What does a librocubicularist do?", "librocubicularist"],
+                            response: "A librocubicularist is someone who reads in bed. The term is derived from the Latin words liber (book) and cubīculum (sleeping chamber or bedroom). Librocubicularists enjoy the practice of reading while lying in bed, making it a comfortable and relaxing activity before sleep or during leisure time. The term is often used playfully and is not a formal profession but rather a descriptive label for individuals who have a penchant for reading in bed."
+                        },
+                        {
+                            keywords: ["What is a prestidigitator?", "prestidigitator"],
+                            response: "A prestidigitator is a person who practices prestidigitation, which is a term used to describe the art and skill of performing magic tricks or sleight of hand. Prestidigitation involves quick and skillful movements of the hands to create illusions, making it appear as though objects vanish, change, or move in ways that defy normal physical laws. Prestidigitators, commonly known as magicians or conjurers, use their manual dexterity and knowledge of illusion to entertain and amaze audiences. The word prestidigitator itself is derived from the French words prestige (meaning illusion or magic) and digitus (meaning finger), emphasizing the use of the fingers in performing magical feats."
+                        },
+                        {
+                            keywords: ["What is the most popular ice cream flavor?", "popular ice cream"],
+                            response: "As of my last knowledge update in January 2022, vanilla is often considered the most popular ice cream flavor worldwide. Vanilla's popularity can be attributed to its versatility, as it serves as a neutral base that pairs well with various toppings, sauces, and desserts. However, preferences can vary regionally and among individuals. It is important to note that popularity trends can change, and new surveys or data may provide updated information on the most popular ice cream flavors. For the latest and most accurate information, it is recommended to check recent market research or surveys related to ice cream consumption."
+                        },
+                        {
+                            keywords: ["Coca-Cola was originally what color?", "Coca Cola", "Coca-Cola was originally what colour?"],
+                            response: "Coca-Cola was originally green in color. The iconic beverage, created by John Stith Pemberton in the late 19th century, was first served at Jacobs' Pharmacy in Atlanta, Georgia, in 1886. The early versions of Coca-Cola were sold in a green glass Hutchinson bottle, and the liquid itself had a caramel color. The green color of the bottle led to the misconception that Coca-Cola itself was green. The modern image of Coca-Cola as a brown beverage comes from the use of clear glass bottles and the dark color of the caramel-flavored liquid. Over the years, the packaging and branding of Coca-Cola have evolved, but the brown color of the beverage remains a prominent and recognizable characteristic."
+                        },
+                        {
+                            keywords: ["What was the first novel written on a typewriter?", "typewriter", "first novel"],
+                            response: "The first novel known to be written on a typewriter is Tom Sawyer by Mark Twain. Twain wrote the manuscript in 1874 using a Sholes and Glidden typewriter, also known as the Remington No. 1. Twain was one of the earliest adopters of the typewriter, and he completed the manuscript for Tom Sawyer while he was living in Hartford, Connecticut. The typewriter was a relatively new invention at the time, and Mark Twain was among the first prominent authors to embrace the technology for his creative work. The novel Tom Sawyer was eventually published in 1876."
+                        },
+                        {
+                            keywords: ["Which country offered Albert Einstein its presidency in 1952?", "Albert Einstein", "presidency"],
+                            response: "In 1952, Israel offered Albert Einstein the presidency of the country. However, Einstein declined the offer. Despite his deep connection to the Jewish people and his support for the Zionist cause, Einstein explained in his letter of decline that he lacked the necessary experience and skills for a political office of such magnitude. Additionally, he expressed concerns about his age and ability to handle the responsibilities of the presidency effectively."
+                        },
+                        {
+                            keywords: ["Thurl Ravenscroft was the voice of what cartoon character?", "Thurl Ravenscroft"],
+                            response: "Thurl Ravenscroft was the voice of Tony the Tiger, the mascot for Kellogg's Frosted Flakes cereal. He provided the iconic deep and friendly voice for the character and delivered the famous catchphrase 'They're grrreat!' Ravenscroft voiced Tony the Tiger for more than five decades, becoming one of the most well-known voices in the world of advertising and cereal marketing."
+                        },
+                        {
+                            keywords: ["The ruins of Troy are located in what country?", "Troy"],
+                            response: "The ruins of Troy are located in modern-day Turkey. Troy, also known as Ilion or Ilium, was an ancient city with historical and mythological significance. It is famous for being the setting of the Trojan War, as described in Homer's epic poems, the 'Iliad' and the 'Odyssey'. The archaeological site of Troy is situated near the western coast of Turkey, in the province of Çanakkale. The ruins have been extensively studied and excavated by archaeologists, providing insights into the ancient history of the region."
+                        },
+                        {
+                            keywords: ["How many spaces are on a Scrabble board?", "scrabble board", "spaces"],
+                            response: "A standard Scrabble board is a 15x15 grid, which means it has 15 spaces both horizontally and vertically. Therefore, there are a total of 15 spaces in each row and 15 spaces in each column, resulting in a total of 225 spaces on the entire Scrabble board."
+                        },
+                        {
+                            keywords: ["What was the biggest-selling toy in 1957?", "biggest-selling toy", "1957"],
+                            response: " The biggest-selling toy in 1957 was the 'Hula Hoop'. The Hula Hoop craze swept the United States and many other countries in the late 1950s, becoming a massive cultural phenomenon. The simple plastic hoop that could be twirled around the waist became a sensation, and millions were sold in a short period. The Hula Hoop's popularity is often attributed to its simplicity, affordability, and the fun and physical activity it provided for children and adults alike."
+                        },
+                        {
+                            keywords: ["What letter does not appear on the periodic table of elements?", "periodic table of elements"],
+                            response: " The letter 'J' does not appear on the periodic table of elements. The periodic table organizes elements based on their atomic number and chemical properties, and the letters used to represent elements are typically the first letter or two of their names. Since there is no element with a name starting with the letter 'J,' you won't find it represented on the periodic table."
+                        },
+                        {
+                            keywords: ["What year in a marriage is the leather anniversary?", "marriage", "leather anniversary"],
+                            response: " The leather anniversary in a marriage is traditionally celebrated on the third year. Therefore, it is often referred to as the 'leather anniversary'. In the context of wedding anniversaries, different materials are associated with each year, symbolizing the evolving nature of the couple's relationship. Leather represents durability, strength, and flexibility, qualities that are often likened to a maturing marriage at the third-year milestone. Couples may exchange leather gifts or find creative ways to incorporate leather into their anniversary celebrations."
+                        },
+                        {
+                            keywords: ["Which U.S. president wrote 37 books?", "U.S. president"],
+                            response: "The U.S. president who wrote 37 books is Theodore Roosevelt. Roosevelt was the 26th president of the United States and served from 1901 to 1909. In addition to his political career, Roosevelt was an avid reader, a prolific writer, and a naturalist. His writings covered a wide range of topics, including politics, history, nature, and adventure. Some of his well-known works include 'The Rough Riders', 'The Winning of the West', and 'African Game Trails'."
+                        },
+                        {
+                            keywords: ["What does Pokémon stand for?", "Pokemon", "What does Pokemon stand for?"],
+                            response: "The term 'Pokémon' is a romanized contraction of the Japanese brand 'Pocket Monsters' (ポケットモンスター), often shortened as 'ポケモン' (Pokémon). The name is a combination of two words: 1. 'Pocket': Referring to the idea that these creatures, known as Pokémon, can be carried in small capsules and kept in a trainer's pocket (as in a Poké Ball). 2. 'Monster': Signifying the various creatures with diverse abilities and characteristics that trainers capture, train, and use to battle each other in the Pokémon universe. Pokémon was created by Nintendo, Game Freak, and Creatures. The franchise includes video games, trading card games, animated TV series, movies, and various other merchandise. It has become one of the most popular and successful entertainment franchises globally since its introduction in the 1990s."
+                        },
+                        {
+                            keywords: ["Who was the sun god of ancient Egypt?", "sun god", "ancient egypt"],
+                            response: "In ancient Egyptian mythology, the sun god was Ra (Re). Ra was a major deity and considered the supreme god in many periods of ancient Egyptian history. The ancient Egyptians believed that Ra sailed across the sky during the day in a boat and journeyed through the underworld at night, making a continuous cycle of death and rebirth. Ra had several forms and attributes associated with the sun, including the morning sun (Khepri), the midday sun (Ra as the falcon-headed god), and the evening sun (Atum). The worship of Ra had a significant impact on ancient Egyptian religion, and various pharaohs identified themselves with Ra, often incorporating the name 'Ra' into their own titles. It's important to note that Egyptian mythology is complex, and different regions and time periods had variations in their beliefs. Ra was a central figure in the solar theology of ancient Egypt, representing the life-giving force of the sun."
+                        },
+                        {
+                            keywords: ["What is the top-grossing Disney movie of all time?", "Disney movie"],
+                            response: "As of my last knowledge update in January 2022, the top-grossing Disney movie of all time is 'The Lion King' (2019). The film is a computer-animated remake of the 1994 animated classic and was directed by Jon Favreau. Please note that box office rankings can change over time as new movies are released and achieve different levels of success. It's advisable to check the latest box office information or rankings for the most up-to-date details, as my information might not reflect any changes that occurred after January 2022."
+                        },
+                        {
+                            keywords: ["What is the longest one-syllable word in the English language?", "longest one syllable word in English"],
+                            response: "The longest one-syllable word in the English language is 'screeched'. Despite having a considerable number of letters, it is pronounced in a single syllable. Other examples of longer one-syllable words include 'strengths' and 'squirreled'. The English language, with its many irregularities and exceptions, can sometimes present interesting linguistic phenomena like these."
+                        },
+                        {
+                            keywords: ["What is a group of kangaroos called?", "kangaroos", "kangaroo"],
+                            response: "A group of kangaroos is commonly referred to as a 'mob', a 'troop', or a 'court'. The specific term used can depend on factors such as the context and the type of kangaroos in the group. A mob of kangaroos typically consists of several individuals, and it may include both males and females. Kangaroos are social animals, and they often gather in groups for protection and social interaction."
+                        },
+                        {
+                            keywords: ["What is the most common name in the world?", "common names", "name"],
+                            response: "Determining the most common name in the world can be challenging due to variations in naming conventions, cultural differences, and the lack of comprehensive global data. However, one of the most widespread names is 'Muhammad' or its various spellings, which is a common name in the Muslim world. The name Muhammad holds significant cultural and religious importance, as it is the name of the Prophet Muhammad in Islam. Many Muslim families choose this name for their sons as a way of expressing admiration and respect for the Prophet. It's important to note that naming patterns can vary widely across different cultures and regions, and popular names can change over time. The information may also be subject to change, so it's advisable to refer to the latest available data for the most accurate insights into common names globally."
+                        },
+                        {
+                            keywords: ["What are the plastic things on the end of shoelaces called?", "shoelaces", "plastic things"],
+                            response: "The plastic or metal tips at the end of shoelaces are called 'aglets'. Aglets serve several purposes, including making it easier to thread the lace through the eyelets of the shoe and preventing the ends of the shoelaces from fraying. They come in various shapes and sizes, but their primary function is to facilitate the lacing of shoes and provide a neat finish to the ends of the shoelaces."
+                        },
+                        {
+                            keywords: ["What is the side of a hammer called?", "hammer", "side of hammer"],
+                            response: "The side of a hammer is commonly referred to as the 'cheek'. The cheek is the broad, flat surface of the hammerhead that is opposite the striking face (the part used for hitting nails or other objects). The cheek is often used for tasks that require a flat surface, such as tapping or smoothing surfaces. In addition to the cheek and striking face, a hammer typically has a claw or peen on the opposite side, used for pulling out nails or for other purposes, depending on the type of hammer."
+                        },
+                        {
+                            keywords: ["What does camera shutter speed “B” stand for?", "camera shutter speed b"],
+                            response: "In photography, the 'B' on a camera's shutter speed dial stands for 'Bulb' mode. Bulb mode is a setting that allows the camera's shutter to remain open as long as the shutter button is held down or until the photographer releases it. This mode is useful for long-exposure photography, where the photographer wants to control the duration of the exposure manually. When the shutter speed is set to Bulb mode, the camera will keep the shutter open for an extended period, capturing scenes like star trails, fireworks, or other low-light situations where a longer exposure time is desired. The name 'Bulb' comes from the historical use of a pneumatic bulb that photographers would squeeze to control the shutter manually in early camera designs."
+                        },
+                        {
+                            keywords: ["What is IBM’s motto?", "imb motto"],
+                            response: "IBM's well-known motto is 'Think'. This simple yet powerful slogan has been associated with IBM for many years and reflects the company's emphasis on innovation, problem-solving, and thoughtful consideration in its approach to technology and business solutions. The motto encourages a proactive and creative mindset, aligning with IBM's commitment to advancing technology and finding intelligent solutions for its clients."
+                        },
+                        {
+                            keywords: ["The most presidents have been born in which state?", "presidents born in which state"],
+                            response: "As of my last knowledge update in January 2022, Virginia is the state that has produced the most U.S. presidents. Eight U.S. presidents were born in Virginia: 1. George Washington 2. Thomas Jefferson 3. James Madison 4. James Monroe 5. William Henry Harrison 6. John Tyler 7. Zachary Taylor 8. Woodrow Wilson. Please note that my information might not reflect any changes that occurred after January 2022."
+                        },
+                        {
+                            keywords: ["Which U.S. president was once a male model?", "US president once a model"],
+                            response: "Before entering politics, Gerald Ford, who later became the 38th President of the United States, worked briefly as a male model. He worked as a fashion model during his time at Yale Law School in the 1930s, where he was featured in Look Magazine. Ford later served as a member of the U.S. House of Representatives, Vice President, and eventually became President of the United States after the resignation of Richard Nixon in 1974."
+                        },
+                        {
+                            keywords: ["What is a baby bat called?", "baby bat"],
+                            response: "A baby bat is called a 'pup'. Like many other mammals, bats give birth to live young ones, and these baby bats are referred to as pups. Pups are born in a relatively undeveloped state and are dependent on their mothers for care and nourishment until they are able to fly and hunt on their own. The term 'pup' is commonly used for the young of various mammal species, including bats."
+                        },
+                        {
+                            keywords: ["In what year was the Golden Gate Bridge first opened?", "golden gate bridge"],
+                            response: "The Golden Gate Bridge first opened to the public on May 27, 1937. The iconic bridge spans the Golden Gate Strait, the entrance to the San Francisco Bay from the Pacific Ocean, connecting the city of San Francisco to Marin County in California, USA. The construction of the Golden Gate Bridge began in 1933, and it was completed ahead of schedule and under budget."
+                        },
+                        {
+                            keywords: ["What do the Olympic rings represent?", "Olympic", "olympic rings"],
+                            response: "The Olympic rings represent the five continents of the world and the unity of the five continents through sports. The symbol was designed by Pierre de Coubertin, the founder of the modern Olympic Games. The five interlocking rings, colored blue, yellow, black, green, and red, were introduced in 1913 and officially debuted at the 1920 Antwerp Summer Olympics. The colors of the rings were chosen because every nation on Earth has at least one of these colors on their national flag. The interconnected rings symbolize the coming together of athletes from different parts of the world to compete in the spirit of friendship, solidarity, and fair play. The Olympic rings have become one of the most recognizable symbols associated with the Olympic Games."
+                        },
+                        {
+                            keywords: ["What does karaoke mean in Japanese?", "karaoke"],
+                            response: "The term 'karaoke' is a combination of two Japanese words: 'kara' (空), meaning 'empty', and 'oke' (オケ), an abbreviation of 'okesutora' (オーケストラ), meaning 'orchestra'. Together, 'karaoke' can be translated as 'empty orchestra'. The term refers to a form of entertainment in which people sing along to pre-recorded instrumental music tracks, typically with lyrics displayed on a screen. Karaoke has become a popular social activity in Japan and around the world."
+                        },
+
+                        //Fastrich et al. (2017)  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6133257/
+                        {
+                            keywords: ["What is the best selling music album of all time?", "best selling music album"],
+                            response: "As of my last knowledge update in January 2022, the best-selling music album of all time is Michael Jackson's 'Thriller'. Released in 1982, 'Thriller' has sold over 66 million copies worldwide. It achieved immense commercial success and critical acclaim, becoming a cultural phenomenon. The album includes iconic tracks such as the title track 'Thriller', 'Billie Jean', 'Beat It', and others. Please note that sales figures can change over time, and it's a good idea to check the latest information for the most up-to-date details on album sales."
+                        },
+                        {
+                            keywords: ["Which planet in the solar system is the only one that rotates clockwise?", "solar system", "planet"],
+                            response: "Venus is the only planet in the solar system that rotates clockwise, or more precisely, it has a retrograde rotation. Most planets in the solar system, including Earth, rotate counterclockwise on their axes. However, Venus has a rotation that is opposite to the direction of its orbit around the Sun. This means that if you were standing on the surface of Venus and could observe the sun, you would see it rise in the west and set in the east, which is the opposite of what we experience on Earth."
+                        },
+                        {
+                            keywords: ["Which product, after oil, is the most frequently traded product around the world?", "most frequently traded product"],
+                            response: "After oil, the most frequently traded product around the world is often considered to be coffee. Coffee is a widely consumed beverage, and the global coffee trade involves the cultivation, production, and distribution of coffee beans. Several countries, particularly those in Central and South America, Africa, and Southeast Asia, are major producers and exporters of coffee. The international coffee market is significant, with various types of coffee beans and blends being traded globally. Coffee is an essential commodity, and its trade plays a crucial role in the economies of many countries."
+                        },
+                        {
+                            keywords: ["Which country has the world's only non-quadrilateral national flag?", "non quadrilateral national flag"],
+                            response: "Nepal has the world's only non-quadrilateral national flag. The flag of Nepal is unique in its shape, as it consists of two overlapping, non-quadrilateral triangles. The upper portion of the flag contains a white moon with a crescent attached, while the lower portion has a white, stylized sun with 12 points. The flag has a crimson-red background. The distinctive shape of the Nepalese flag reflects the national symbols of the moon and the sun. The flag was adopted on December 16, 1962, and its design is laden with symbolism representing aspects of the country's history, culture, and geography."
+                        },
+                        {
+                            keywords: ["What is the country with the highest population density?", "country highest population density"],
+                            response: "As of my last knowledge update in January 2022, the country with the highest population density is Monaco. Monaco is a small sovereign city-state located on the French Riviera in Western Europe. It has a limited land area, and its population is concentrated in a small urban area. The combination of a small land area and a relatively high population makes Monaco the most densely populated country in the world. Please note that population density rankings may change over time, and it's advisable to check the latest data for the most up-to-date information."
+                        },
+                        {
+                            keywords: ["Which fish can produce more eggs than any other known vertebrate?", "vertebrate fish"],
+                            response: "The fish that is known to produce more eggs than any other vertebrate is the ocean sunfish (Mola mola). The ocean sunfish is a large, peculiar-looking fish with a flattened body and a unique appearance. Despite its size, the ocean sunfish is a prolific egg producer. A single female ocean sunfish is capable of producing millions of eggs at a time. The sheer quantity of eggs produced by the ocean sunfish is remarkable, contributing to its status as one of the vertebrates with the highest reproductive output."
+                        },
+                        {
+                            keywords: ["What breed of dog is the only animal whose evidence is admissible in some USA courts?", "admissible dog breed"],
+                            response: "In some U.S. courts, the only breed of dog whose evidence may be admissible is the Bloodhound. Bloodhounds are known for their exceptional sense of smell and tracking abilities. Their evidence, particularly related to tracking scents and following trails, is sometimes considered admissible in certain legal proceedings. Bloodhounds have been used in search and rescue operations as well as criminal investigations for their unique olfactory capabilities. However, the admissibility of evidence from animals, including dogs, can vary depending on jurisdiction, specific circumstances, and legal considerations. It's important to note that legal standards and practices may change, so it's advisable to consult legal professionals for the most current information on this matter."
+                        },
+                        {
+                            keywords: ["What Beatles song remained the longest on the music charts?", "Beatles"],
+                            response: "The Beatles' song 'Hey Jude' holds the record for spending the longest time on the Billboard Hot 100 chart in the United States. Released in 1968, 'Hey Jude' remained on the chart for 19 weeks. The song, written by Paul McCartney and credited to Lennon-McCartney, was a major commercial success and became one of The Beatles' most iconic and enduring songs. Its extended coda and uplifting message contributed to its popularity and longevity on the charts."
+                        },
+                        {
+                            keywords: ["What is the only lizard that has a voice?", "lizard"],
+                            response: "The tokay gecko (Gekko gecko) is the only lizard known to have a voice or make vocalizations. Native to Southeast Asia, the tokay gecko is recognized for its distinctive and loud vocalizations, which include loud, repetitive calls that sound like 'to-kay! to-kay!' These calls are often used by the geckos for communication, territorial disputes, or attracting mates. The vocalizations are more commonly heard during the breeding season. The unique vocal ability of the tokay gecko sets it apart from many other lizard species."
+                        },
+                        {
+                            keywords: ["Which chemical element belongs in the Halogen Family with fluorine, chlorine, bromine and astatine?", "chemical element"],
+                            response: "The chemical element iodine belongs to the Halogen family, along with fluorine, chlorine, bromine, and astatine. The Halogens are a group of elements in Group 17 of the periodic table, known for their similar chemical properties. Iodine is a nonmetal and, like other halogens, exhibits characteristics such as high reactivity and the tendency to form salts when combined with metals."
+                        },
+                        {
+                            keywords: ["What island country lies off the south-east coast of India?", "south east coast of india"],
+                            response: "Sri Lanka is the island country that lies off the southeast coast of India. It is located in the Indian Ocean and is separated from the southeastern tip of India by the Palk Strait and the Gulf of Mannar. Sri Lanka is known for its rich cultural heritage, diverse landscapes, and is surrounded by the Indian Ocean to the south and southeast. The capital city of Sri Lanka is Colombo."
+                        },
+                        {
+                            keywords: ["What is the longest river in Asia?", "river in asia"],
+                            response: "The longest river in Asia is the Yangtze River. The Yangtze, also known as the Chang Jiang, is the longest river in both China and Asia and the third-longest river in the world (after the Nile in Africa and the Amazon in South America). It flows for approximately 6,300 kilometers (3,917 miles) from its source in the Tibetan Plateau to its mouth where it empties into the East China Sea near Shanghai. The Yangtze River plays a significant role in Chinese history, culture, and economic development."
+                        },
+                        {
+                            keywords: ["What is the name of the artist who painted the 'Tahitian Women on the Beach'?", "Tahitian Women on the Beach"],
+                            response: "'Tahitian Women on the Beach' is a painting by the French Post-Impressionist artist Paul Gauguin. Gauguin created this artwork in 1891 during his stay in Tahiti. The painting features two Tahitian women in a tropical beach setting, reflecting Gauguin's fascination with the exotic and his exploration of primitivism in art. Paul Gauguin's works often depict scenes from Tahiti, where he lived for several years, and they are known for their vibrant colors and distinct style."
+                        },
+                        {
+                            keywords: ["In which country is Angel Falls, the tallest waterfall, located?", "Angel Falls", "tallest waterfall"],
+                            response: "Angel Falls, the tallest waterfall in the world, is located in Venezuela. It is situated in the Canaima National Park in the Gran Sabana region. Angel Falls has a height of approximately 3,212 feet (979 meters) and is known for its breathtaking beauty as the water cascades over the edge of the Auyán-tepui mountain. The falls are named after Jimmy Angel, a U.S. aviator, who was the first to fly over the falls in 1933."
+                        },
+                        {
+                            keywords: ["What is the largest temple in Egypt?", "egypt"],
+                            response: "The Karnak Temple Complex, located in Luxor, Egypt, is often considered the largest temple in Egypt. Karnak is a vast complex of temples, chapels, pylons, and other structures dedicated to various deities of ancient Egypt. It is an impressive example of the religious architecture of the New Kingdom (circa 1550–1070 BCE). Within the Karnak complex, the Temple of Amun-Ra is one of the most significant structures. Amun-Ra was a major deity in the Egyptian pantheon, and the temple dedicated to him at Karnak is characterized by its grandeur and scale. The complex covers a large area and includes various precincts and halls. The construction and expansion of Karnak spanned centuries, with different pharaohs contributing to its development."
+                        },
+                        {
+                            keywords: ["In which country is the temple of 'Angkor Wat' located?", "angkor wat"],
+                            response: "The temple of Angkor Wat is located in Cambodia. Angkor Wat is a massive temple complex and one of the most important archaeological sites in Southeast Asia. It was originally built in the 12th century as a Hindu temple dedicated to the god Vishnu but was later transformed into a Buddhist temple. Angkor Wat is part of the larger Angkor Archaeological Park, which encompasses several temples and ancient structures. The site is a UNESCO World Heritage site and a symbol of Cambodia, attracting millions of visitors each year."
+                        },
+                        {
+                            keywords: ["What is the largest freshwater lake in the world by surface area?", "largest freshwater lake"],
+                            response: "Lake Superior is the largest freshwater lake in the world by surface area. It is one of the Great Lakes of North America and is located on the border of the United States and Canada. Lake Superior has a surface area of approximately 31,700 square miles (82,100 square kilometers). The Great Lakes, which include Lake Superior, Lake Michigan, Lake Huron, Lake Erie, and Lake Ontario, collectively contain a significant portion of the world's freshwater."
+                        },
+                        {
+                            keywords: ["Which popular Greek philosopher is said to have tutored Alexander the Great?", "greek philosopher"],
+                            response: "The popular Greek philosopher who is said to have tutored Alexander the Great is Aristotle. Aristotle, a student of Plato, was the tutor and mentor to Alexander during his early years. Alexander, who later became known as Alexander the Great, went on to become one of the most successful military commanders in history, conquering a vast empire that extended from Greece to Asia. Aristotle's teachings had a profound influence on Alexander, shaping his intellectual and philosophical foundations."
+                        },
+                        {
+                            keywords: ["Which Australian state was formerly known as Van Diemen's Land?", "Van Diemens"],
+                            response: "The Australian state that was formerly known as Van Diemen's Land is Tasmania. Van Diemen's Land was the original name given to the island state during the time when it was a penal colony under British rule. The name was changed to Tasmania in 1856 to honor Abel Tasman, the Dutch explorer who was the first European to reach the island in 1642. Tasmania is located to the south of the Australian mainland and is known for its natural beauty and diverse ecosystems."
+                        },
+                        {
+                            keywords: ["What insulates the ice cream to prevent it from melting in the hot dish 'Baked Alaska'?", "bake alsaka"],
+                            response: "In the dessert known as 'Baked Alaska', the ice cream is insulated from the heat by a layer of meringue. Baked Alaska is a dessert that typically consists of layers of ice cream and cake, topped with a thick layer of meringue. The meringue acts as insulation, protecting the ice cream from direct exposure to the heat in the oven. When preparing Baked Alaska, the dessert is briefly placed in a very hot oven just long enough to brown the meringue, creating a beautifully toasted exterior while keeping the ice cream inside from melting. The meringue serves as a heat-resistant barrier, allowing the dessert to be briefly baked without compromising the frozen interior."
+                        },
+                        {
+                            keywords: ["What body of water does the Danube River flow into?", "danube river"],
+                            response: "The Danube River flows into the Black Sea. It is the second-longest river in Europe, traversing multiple countries before reaching its final destination. The Danube passes through or forms the borders of ten countries: Germany, Austria, Slovakia, Hungary, Croatia, Serbia, Bulgaria, Romania, Moldova, and Ukraine, before eventually emptying into the Black Sea. The river plays a significant role in the geography, history, and cultural heritage of the regions it flows through."
+                        },
+                        {
+                            keywords: ["What is added to white sugar to make brown sugar?", "white suagr", "brown sugar"],
+                            response: "Brown sugar is typically made by adding molasses to white sugar. Molasses is a byproduct of the sugar refining process, and it contains residual components like water, minerals, and other impurities. The amount of molasses added to white sugar determines the color and flavor of the resulting brown sugar. There are two main types of brown sugar: Light Brown Sugar: This contains a lower amount of molasses, resulting in a lighter color and milder flavor. Dark Brown Sugar: This has a higher molasses content, giving it a darker color and a more robust, caramel-like flavor. The molasses not only imparts color and flavor but also contributes moisture to the sugar, making brown sugar moister than granulated white sugar."
+                        },
+                        {
+                            keywords: ["What is the name of Beethoven's only opera?", "Beethoven opera"],
+                            response: "Ludwig van Beethoven's only opera is titled 'Fidelio'. The full title of the opera is 'Fidelio', or 'Married Love' (German: 'Fidelio oder die eheliche Liebe'). Beethoven composed 'Fidelio' between 1804 and 1814, and it went through several revisions before its premiere in 1814. The opera tells the story of a woman named Leonore who disguises herself as a prison guard named Fidelio in an attempt to rescue her husband, Florestan, who is unjustly imprisoned. 'Fidelio' is celebrated for its powerful music and themes of justice, freedom, and marital fidelity. Despite its initial challenges and revisions, the opera has become a part of the standard operatic repertoire."
+                        },
+                        {
+                            keywords: ["In which city would you find the Hermitage art gallery?", "Hermitage"],
+                            response: "The Hermitage Museum, one of the world's largest and most renowned art museums, is located in St. Petersburg, Russia. The full name of the museum is the State Hermitage Museum and Winter Palace. The Hermitage has a vast collection of art and cultural artifacts, spanning a wide range of periods and styles. It is housed in the Winter Palace and several other buildings along the Palace Embankment on the Neva River in St. Petersburg."
+                        },
+                        {
+                            keywords: ["Which country has the longest coastline?", " longest coastline"],
+                            response: "Canada has the longest coastline of any country in the world. The extensive Canadian coastline stretches along the Atlantic, Pacific, and Arctic Oceans, totaling approximately 202,080 kilometers (125,567 miles). The country's coastline is characterized by diverse landscapes, including fjords, cliffs, islands, and a significant portion of the Arctic coastline. Canada's extensive shoreline contributes to its marine biodiversity and natural beauty."
+                        },
+                        {
+                            keywords: ["What is the last name of the cosmonaut who first orbited around the Earth?", "cosmonaut", "orbit"],
+                            response: "The cosmonaut who became the first human to orbit the Earth was Yuri Gagarin. Yuri Gagarin's historic spaceflight took place on April 12, 1961, aboard the spacecraft Vostok 1. During this mission, Gagarin completed one orbit around the Earth, marking a significant milestone in space exploration."
+                        },
+
+                    ]
+
+                    function shuffleArray(array) {
+                        var currentIndex = array.length, randomIndex;
+
+                        while (currentIndex != 0) {
+                            randomIndex = Math.floor(Math.random() * currentIndex);
+                            currentIndex--;
+
+                            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+                        }
+
+                        return array;
+                    }
+
+                    function delaytime(callback, noDelay, fixedDelay) {
+                        if (noDelay) {
+                            console.log("Experiment started with no delay.");
+                            callback();
+                        } else {
+                            console.log("Experiment started with delay: " + fixedDelay + "ms");
+                            setTimeout(function () {
+                                callback();
+                            }, fixedDelay);
+                        }
+                    }
+
+                    function startExperiment() {
+                        questions = [...questions];
+                        showNextQuestion();
+                    }
+
+                    function showQuestionContainer() {
+                        var currentQuestion = questions[currentQuestionIndex];
+                        document.getElementById("question-text").textContent = "Ask me: '" + currentQuestion + "'.";
+                        startButton.style.display = "none";
+                        nextButton.style.display = "block";
+                        startButton.disabled = true;
+                    }
+
+                    function showNextQuestion() {
+                        if (currentQuestionIndex < questions.length) {
+                            showQuestionContainer();
+                        } else {
+                            // User has completed all questions
+                            document.getElementById("question-text").textContent = "You've completed all the questions!";
+                            startButton.style.display = "block";
+                            nextButton.style.display = "none";
+                            startButton.textContent = "Restart";
+                            currentQuestionIndex = 0;
+                        }
+                    }
+
+                    function sendMessage() {
+                        var userInput = userInputField.value;
+                        if (userInput.trim() === "") {
+                            return;
+                        }
+
+                        var userMessage = document.createElement("div");
+                        userMessage.className = "message user-message";
+                        userMessage.textContent = userInput;
+                        chatBox.appendChild(userMessage);
+
+                        var loadingMessage = document.createElement("div");
+                        loadingMessage.className = "message received-message loading-message";
+                        loadingMessage.textContent = "...";
+                        chatBox.appendChild(loadingMessage);
+
+                        // Store user message in chat data
+                        var userMessageData = {
+                            type: "user",
+                            message: userInput,
+                            timestamp: new Date().toISOString()
+                        };
+                        chatData.push(userMessageData);
+
+                        delaytime(function () {
+                            // Process user input and generate responses
+                            var matchedResponse = promptedResponses.find(item => {
+                                return item.keywords.some(keyword => userInput.toLowerCase().includes(keyword.toLowerCase()));
+                            });
+
+                            chatBox.removeChild(loadingMessage);
+                            userInputField.value = "";
+
+                            if (matchedResponse) {
+                                var chatGPTResponse = document.createElement("div");
+                                chatGPTResponse.className = "message received-message";
+                                chatGPTResponse.textContent = matchedResponse.response;
+                                chatBox.appendChild(chatGPTResponse);
+                            } else {
+                                var receivedMessage = document.createElement("div");
+                                receivedMessage.className = "message received-message";
+                                receivedMessage.textContent = "I'm sorry, I don't understand that.";
+                                chatBox.appendChild(receivedMessage);
+                            }
+
+                            // Store chatGPT response in chat data
+                            var chatGPTResponseData = {
+                                type: "bot",
+                                message: matchedResponse ? matchedResponse.response : "I'm sorry, I don't understand that.",
+                                timestamp: new Date().toISOString()
+                            };
+                            chatData.push(chatGPTResponseData);
+
+                            chatBox.scrollTop = chatBox.scrollHeight;
+
+                            // Show the next question after processing user input
+                            showNextQuestion();
+                        }, false, 1000, 3000, 5000, 7000);
+                    }
+
+                    function clearChat() {
+                        chatBox.innerHTML = "";
+                        userInputField.value = "";
+                        chatData = [];
+                    }
+
+                    userInputField.addEventListener("keyup", function (event) {
+                        if (event.keyCode === 13) {
+                            sendMessage();
+                        }
+                    });
+
+                    sendButton.addEventListener("click", sendMessage);
+
+                    startButton.addEventListener("click", function () {
+                        startExperiment();
+                        startButton.disabled = true;
+                        showRatingModal();
+                    });
+
+                    ratingButtons.forEach(function (button) {
+                        button.addEventListener("click", function () {
+                            var rating = parseInt(button.textContent);
+                            rateQuestion(rating);
+                        });
+                    });
+
+                    newChatButton.addEventListener("click", function () {
+                        clearChat();
+                        location.reload();
+                    });
+
+                    nextButton.addEventListener("click", function () {
+                        currentQuestionIndex++;
+                        showNextQuestion();
+                        showRatingModal();
+                        clearChat()
+                    });
+
+                });
+
+                function showCompletionModal() {
+                    var completionModal = document.getElementById("completionModal");
+                    var modalOverlay = document.getElementById("modalOverlay");
+
+                    completionModal.style.display = "block";
+                    modalOverlay.style.display = "block";
                 }
 
-                function showPopupWindow() {
-                    var randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-                    document.getElementById("question-text").textContent = "Ask me: '" + randomQuestion + "'.";
-                    popupContainer.style.display = "flex";
-                }
+                // Add an event listener to the "Go to Another Page" button
+                var redirectButton = document.getElementById("redirectButton");
+                redirectButton.addEventListener("click", function () {
+                    // Redirect the user to another page
+                    window.location.href = "/Users/chloelam/Library/CloudStorage/OneDrive-UniversityofSouthampton/projects/Tina/chatgptbot_stage2.html";
+                });
 
-                showPopupWindow();
-
-                function startExperiment() {
-                    delayType = randomizeDelay();
-                    console.log("Experiment started with delay type: " + delayType);
-                }
-
-                function getDelayTime() {
-                    return delayType === 'short' ? 3000 : 6000;
-                }
-
-                function sendMessage() {
-                    var userInput = userInputField.value.trim();
-                    if (userInput === "") {
-                        return;
-                    }
-
-                    function showLikertRating() {
-                        var likertContainer = document.getElementById("likert-container");
-                        likertContainer.style.display = "flex";    
-                    }
-
-                    function hideLikertRating() {
-                        likertContainer.style.display = "none";
-                    }
-
-                    function getLikertRating() {
-                        return likertRatingInput.value;
-                    }
-
-                    function submitLikertRating() {
-                        var likertRating = getLikertRating();
-                        console.log("Likert Rating: " + likertRating);
-                        hideLikertRating();
-                    }
-
-                    likertSubmitButton.addEventListener("click", submitLikertRating);
-
-     // Store user message in chat data
-     var userMessageData = {
-        type: "user",
-        message: userInput,
-        timestamp: new Date().toISOString()
-    };
-    chatData.push(userMessageData);
-
-    // Clear the user input field
-    userInputField.value = "";
-
-    // Continue the conversation 
-    var matchedResponse = promptedResponses.find(item => {
-        return item.keywords.some(keyword => userInput.toLowerCase().includes(keyword.toLowerCase()));
-    });
-
-    // Add user message to the chat box
-    var userMessage = document.createElement("div");
-    userMessage.className = "message user-message";
-    userMessage.textContent = userInput;
-    chatBox.appendChild(userMessage);
-
-    // Add loading message to the chat box
-    var loadingMessage = document.createElement("div");
-    loadingMessage.className = "message received-message loading-message";
-    loadingMessage.textContent = "...";
-    chatBox.appendChild(loadingMessage);
-
-    setTimeout(function () {
-            chatBox.removeChild(loadingMessage);
-
-            var chatGPTResponse;
-            if (matchedResponse) {
-                chatGPTResponse = document.createElement("div");
-                chatGPTResponse.className = "message received-message";
-                chatGPTResponse.textContent = matchedResponse.response;
-                chatBox.appendChild(chatGPTResponse);
-            } else {
-                chatGPTResponse = document.createElement("div");
-                chatGPTResponse.className = "message received-message";
-                chatGPTResponse.textContent = "I'm sorry, I don't understand that.";
-                chatBox.appendChild(chatGPTResponse);
-            }
-
-            // Store response
-            var chatGPTResponseData = {
-                type: "bot",
-                message: matchedResponse ? matchedResponse.response : "I'm sorry, I don't understand that.",
-                timestamp: new Date().toISOString()
-            };
-            chatData.push(chatGPTResponseData);
-
-            // remove the question and feedback after 3 or 6 seconds based on delayType
-            setTimeout(function () {
-                        chatBox.removeChild(userMessage);
-                        chatBox.removeChild(chatGPTResponse);
-                    }, getDelayTime());
-                }, getDelayTime());
-            }       
-
-
-//save data online (not tested yet)
-function endConversation() {
-    if (userInputField.value.toLowerCase().includes("no")) {
-        isConversationEnded = true;
-        
-    // End the conversation and store data
-    var chatGPTResponseData = {
-        type: "bot",
-        message: "Conversation ended. Data sent to the server.",
-        timestamp: new Date().toISOString()
-    };
-    chatData.push(chatGPTResponseData);
-
-    // Send chatData to the server
-    fetch('save_chat.php', { //Insert the php of the service here
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(chatData),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Success:', data);
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
-
-    // Clear the chatData array for the next conversation
-    chatData = [];
-}};
-
-// //save data locally
-// function exportConversation() {
-//     var conversationData = chatData;
-//     // Convert data to CSV format
-//     var csvContent = "data:text/csv;charset=utf-8,";
-//     csvContent += "Type,Message,Timestamp,DelayType\r\n"; 
-
-//     conversationData.forEach(function (row) {
-//         csvContent += row.type + "," + row.message + "," + row.timestamp + "," +
-//             (row.participantInfo ? row.participantInfo.delayType : "") + "\r\n";
-//     });
-    
-  
-function clearChat() {
-    chatBox.innerHTML = "";
-    userInputField.value = "";
-    chatData = [];
-    document.getElementById("end-conversation-button").style.display = "none";
-    document.getElementById("export-button").style.display = "none";
-}
-
-function handleKeyDown(event) {
-    event.preventDefault(); 
-        if (event.keyCode === 13) {
-        sendMessage();
-    }
-}
-
- // Event listeners
- startButton.addEventListener("click", function () {
-        popupContainer.style.display = "none";
-        startExperiment();
-    });
-
-    sendButton.addEventListener("click", function(){
-        sendMessage();    
-    });
-
-    // endConversationButton.addEventListener("click", endConversation);
-    // userInputField.addEventListener("keydown", function(){ 
-    //     handleKeyDown()
-    // });
-    
-    newChatButton.addEventListener("click", function(){ 
-        clearChat()
-    });
-
- })
-
-</script>
+            </script>
+        </div>
 </body>
+
 </html>
